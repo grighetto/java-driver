@@ -1,30 +1,45 @@
 # Datastax Java Driver for Apache Cassandra
 
-*If you're reading this on GitHub, please note that this is the readme
+![Travis Build](https://travis-ci.org/datastax/java-driver.svg?branch=2.0)
+
+*If you're reading this on github.com, please note that this is the readme
 for the development version and that some features described here might
 not yet have been released. You can find the documentation for latest
 version through [Java driver
 docs](http://datastax.github.io/java-driver/) or via the release tags,
 [e.g.
 2.0.10](https://github.com/datastax/java-driver/tree/2.0.10).*
-   
-![Travis Build](https://travis-ci.org/datastax/java-driver.svg?branch=2.0)
-   
-A Java client driver for Apache Cassandra. This driver works exclusively with
-the Cassandra Query Language version 3 (CQL3) and Cassandra's binary protocol.
 
-- JIRA: https://datastax-oss.atlassian.net/browse/JAVA
-- MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/java-driver-user
-- IRC: #datastax-drivers on [irc.freenode.net](http://freenode.net)
-- TWITTER: Follow the latest news about DataStax Drivers - [@olim7t](http://twitter.com/olim7t), [@mfiguiere](http://twitter.com/mfiguiere)
-- DOCS: http://www.datastax.com/documentation/developer/java-driver/2.0/index.html
-- API: http://www.datastax.com/drivers/java/2.0
-- CHANGELOG: https://github.com/datastax/java-driver/blob/2.0/driver-core/CHANGELOG.rst
+A modern, [feature-rich](features/) and highly tunable Java client
+library for Apache Cassandra (1.2+) and DataStax Enterprise (3.1+) using
+exclusively Cassandra's binary protocol and Cassandra Query Language v3.
+
+## Features
+
+* [Sync][sync] and [Async][async] API
+* [Simple][simple_st], [Prepared][prepared_st], and [Batch][batch_st] statements
+* Asynchronous IO, parallel execution, request pipelining
+* [Connection pooling][pool]
+* Auto node discovery
+* Automatic reconnection
+* Configurable [load balancing][lbp] and [retry policies][retry_policy]
+* Works with any cluster size
+* [Query builder][query_builder]
+
+[sync]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/Session.html#execute(com.datastax.driver.core.Statement)
+[async]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/Session.html#executeAsync(com.datastax.driver.core.Statement)
+[simple_st]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/SimpleStatement.html
+[prepared_st]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/Session.html#prepare(com.datastax.driver.core.RegularStatement)
+[batch_st]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/BatchStatement.html
+[pool]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/PoolingOptions.html
+[lbp]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/policies/LoadBalancingPolicy.html
+[retry_policy]: http://datastax.com/drivers/java/2.0/com/datastax/driver/core/policies/RetryPolicy.html
+[query_builder]: http://www.datastax.com/drivers/java/2.0/com/datastax/driver/core/querybuilder/QueryBuilder.html
 
 The driver architecture is based on layers. At the bottom lies the driver core.
 This core handles everything related to the connections to a Cassandra
 cluster (for example, connection pool, discovering new nodes, etc.) and exposes a simple,
-relatively low-level API on top of which higher level layer can be built.
+relatively low-level API on top of which higher level layers can be built.
 
 The driver contains the following modules:
 
@@ -35,6 +50,16 @@ The driver contains the following modules:
 More modules including a simple object mapper will come shortly.
 
 Please refer to the README of each module for more information.
+
+## Community
+
+- JIRA: https://datastax-oss.atlassian.net/browse/JAVA
+- MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/java-driver-user
+- IRC: #datastax-drivers on [irc.freenode.net](http://freenode.net)
+- TWITTER: Follow the latest news about DataStax Drivers - [@olim7t](http://twitter.com/olim7t), [@mfiguiere](http://twitter.com/mfiguiere)
+- DOCS: http://www.datastax.com/documentation/developer/java-driver/2.0/index.html
+- API: http://www.datastax.com/drivers/java/2.0
+- CHANGELOG: https://github.com/datastax/java-driver/blob/2.0/driver-core/CHANGELOG.rst
 
 ## Maven
 
