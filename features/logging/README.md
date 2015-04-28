@@ -2,16 +2,17 @@
 
 ### Setup
 
-The driver uses [SLF4J](http://www.slf4j.org) to emit log messages; but being a library, 
-it does not attempt to configure any specific logging framework itself. 
+DataStax Java driver uses the popular [SLF4J](http://www.slf4j.org) library to emit log messages; 
+SLF4J has the advantage of providing a logging API that is entirely decoupled from concrete
+implementations, letting client applications free to seamlessly connect SLF4J to their preferred logging backend.
 
+The driver itself does not attempt to configure any concrete logging framework. 
 It is up to client applications using the driver to correctly set up their classpath and 
-runtime configuration to be able to correctly capture log messages emitted by the driver.
-
-Concretely, client applications need to provide, at runtime, a _binding_ to any logging framework 
+runtime configuration to be able to capture log messages emitted by the driver.
+Concretely, client applications need to provide, at runtime, a *binding* to any logging framework 
 of their choice that is [compatible with SLF4J](http://www.slf4j.org/manual.html#swapping).
 
-If your application is built with Maven, this usually involves adding one dependency to your POM file.
+If your application is built with Maven, this usually involves adding one (runtime) dependency to your POM file.
 For example, if you intend to use [Logback](http://logback.qos.ch), add the following dependency:
 
 ```xml
@@ -37,128 +38,261 @@ other logging frameworks, and for troubleshooting dependency resolution problems
 
 ### Configuration
 
-The driver log level can be adjusted according
+Each logging framework has its own configuration rules, but all of them provide
+different levels (DEBUG, INFO, WARN, ERROR...), different *loggers* or *categories*
+(messages from different categories or loggers can be filtered out separately or printed out
+differently), and different *appenders* (message receptacles such as the standard console,
+the error console, a file on disk, a socket...).
 
-The
+Check your logging framework documentation for more information about how to properly configure it.
+You can also find some configuration examples below.
 
-Example for logback production
-Adjust log levels
+### Useful loggers
 
-<table>
-<thead>
-<tr><th>Logger Name</th><th>ERROR</th><th>WARN</th><th>INFO</th><th>DEBUG</th><th>TRACE</th></tr>
-</thead>
-<tbody>
-<tr>
-    <th><code>com.datastax.driver.core.Cluster</code></th>
-    <td>
-        Authentication errors
-        Unexpected errors when handling events, reconnecting, refreshing schemas
-        Unexpected events
-    </td>
-    <td>
-        Cluster name mismatches, 
-        Unsupported protocol versions, 
-        Schema disagreement, 
-        Ignored notifications due to contention
-        Unreachable contact points
-    </td>
-    <td>
-        Host Added / Removed
-    </td>
-    <td>
-        Cluster lifecycle (start, shutdown), 
-        Event delivery notifications (schema changes, topology changes, , 
-        Hosts Up / Down / Added / Removed events, 
-        hosts being ignored because not enough info, 
-        Protocol version negotiation, 
-        Reconnection attempts
-        Schema metadata refreshes
-    </td>
-    <td>TRACE
-        Renewing pools
-    </td>
-</tr>
-<tr>
-    <th><code>com.datastax.driver.core.Session</code></th>
-    <td>ERROR
-        Pool creation/refresh error
-        Error preparing query
-    </td>
-    <td>
-        Replacing non closed pool
-    </td>
-    <td>INFO</td>
-    <td>DEBUG
-        Connection pool added renewed
-    </td>
-    <td>TRACE
-    </td>
-</tr>
+When debugging the Java driver, the following loggers could be particularly useful
+and provide hints about what's going wrong.
 
-<tr>
-    <th><code>com.datastax.driver.core.RequestHandler</code></th>
-    <td>ERROR
-        Pool creation/refresh error
-        Error preparing query
-        host is bootstrapping
-        unknown prepared query
-        error querying host
-    </td>
-    <td>
-        Replacing non closed pool
-        host overloaded, server error
-    </td>
-    <td>INFO
-        Query {} is not prepared on {}, preparing before retrying executing
-    </td>
-    <td>DEBUG
-        Error querying host trying next
-        query state race conditions (in progress, complete, timeout)
-        retries attempts
-    </td>
-    <td>TRACE
-        host being queried
-    </td>
-</tr>
-
-<tr>
-    <th><code>com.datastax.driver.core.Connection</code></th>
-    <td>ERROR
-    </td>
-    <td>
-    problem setting keyspace
-    error closing channel
-    </td>
-    <td>INFO
-    </td>
-    <td>DEBUG
-        open close defunct
-        error connecting, writing request
-        already terminated, not terminating
-        unsupported protocol version
-        heartbeats
-    </td>
-    <td>TRACE
-    authentication
-    keyspace
-    writing request
-    request sent
-    response received
-    </td>
-</tr>
-</tbody>
-</table>
+* `com.datastax.driver.core.Cluster`
+    * ERROR
+        * Authentication errors
+        * Unexpected errors when handling events, reconnecting, refreshing schemas
+        * Unexpected events
+    * WARN
+        * Cluster name mismatches
+        * Unreachable contact points
+        * Unsupported protocol versions 
+        * Schema disagreements
+        * Ignored notifications due to high contention
+    * INFO
+        * Hosts added or removed
+    * DEBUG
+        * Cluster lifecycle (start, shutdown)
+        * Event delivery notifications (schema changes, topology changes)
+        * Topology change events: hosts Up / Down / Added / Removed
+        * Hosts being ignored
+        * Protocol version negotiation
+        * Reconnection attempts
+        * Schema metadata refreshes
+    * TRACE
+        * Connection pools lifecycle (create, renew, refresh)
+* `com.datastax.driver.core.Session`
+    * ERROR
+        * Errors related to connection pools
+    * WARN
+        * Problems related to connection pools
+    * DEBUG
+        * Connection pools lifecycle (create, renew, refresh)
+* `com.datastax.driver.core.RequestHandler`
+    * ERROR
+        * Unexpected errors preparing queries
+        * Queries sent to a bootstrapping host
+        * Unexpected server errors
+    * WARN
+        * Queries sent to an overloaded host
+    * INFO
+        * Unprepared queries
+    * DEBUG
+        * Retry attempts
+    * TRACE
+        * Host currently being queried
+* `com.datastax.driver.core.Connection`
+    * WARN
+        * Problem setting keyspace
+        * Errors closing Netty channel
+    * DEBUG
+        * Connection lifecycle (open, close, defunct)
+        * Error connecting or writing requests
+        * Heartbeats
+    * TRACE
+        * Authentication progress
+        * Sending requests
+        * Receiving responses
 
 ### Logging query latencies
 
+Version 2.0.10 of the driver introduces a new feature: the `QueryLogger`.
+
+This new API provides clients with the ability to log queries executed by the driver,
+and specially, it allows client to track slow queries, i.e. queries that take longer to
+complete than a configured threshold in milliseconds.
+
+To turn on this feature, you first need to instantiate and register a `QueryLogger` instance:
 
 ```java
-Cluster cluster = Cluster.builder()
-    .addContactPoint("1.2.3.4")
-    .withAddressTranslater(new EC2MultiRegionAddressTranslater())
-    .build();
+Cluster cluster = ...
+QueryLogger queryLogger = QueryLogger.builder(cluster)
+    .withConstantThreshold(...)
+    .withMaxQueryStringLength(...)
+.build();
+cluster.register(queryLogger);
 ```
 
-### Using JMX
+Refer to the `QueryLogger` javadoc for more information.
 
+Secondly, you need to adjust your logging framework to accept log messages from the `QueryLogger`. The `QueryLogger`
+uses 3 different loggers:
+
+* `com.datastax.driver.core.QueryLogger.NORMAL` : Used to log normal queries, i.e., queries that completed successfully within a configurable threshold in milliseconds.
+* `com.datastax.driver.core.QueryLogger.SLOW` : Used to log slow queries, i.e., queries that completed successfully but that took longer than a configurable threshold in milliseconds to complete.
+* `com.datastax.driver.core.QueryLogger.ERROR`: Used to log unsuccessful queries, i.e., queries that did not completed normally and threw an exception. Note this this logger will also print the full stack trace of the reported exception.
+
+You need to set at least of of the above loggers to DEBUG level to turn them on. E.g. to track queries
+that take more than 300ms, configure your `QueryLogger` with that threshold, then set the `com.datastax.driver.core.QueryLogger.SLOW` logger
+to DEBUG, e.g. with Log4J:
+
+```xml
+  <logger name="com.datastax.driver.core.QueryLogger.SLOW">
+    <level value="DEBUG"/>
+  </logger>
+```
+
+The `QueryLogger` would then print messages such as this for every slow query:
+
+```
+DEBUG [cluster1] [/127.0.0.1:9042] Query too slow, took 329 ms: SELECT * FROM users WHERE user_id=?;
+```
+
+As you can see, actual query parameters are not logged; if you want query parameters to be printed as well, set the `com.datastax.driver.core.QueryLogger.SLOW` logger
+to TRACE instead, e.g. with Log4J:
+
+```xml
+  <logger name="com.datastax.driver.core.QueryLogger.SLOW">
+    <level value="TRACE"/>
+  </logger>
+```
+
+The `QueryLogger` would then print messages such as this for every slow query:
+
+```
+TRACE [cluster1] [/127.0.0.1:9042] Query too slow, took 329 ms: SELECT * FROM users WHERE user_id=? [user_id=42];
+```
+
+Be careful when logging large query strings (specially batches) and/or queries with considerable amounts of parameters. 
+See the `QueryLogger` documentation for ways to truncate the printed message when necessary.
+
+#### Constant vs Dynamic thresholds
+
+Currently the `QueryLogger` can be configured to track slow queries using either 
+a constant threshold in milliseconds (which is the default behavior), or 
+a dynamic threshold based on per-host latency percentiles, as computed by `PerHostPercentileTracker`.
+
+**WARNING: Dynamic thresholds are still a beta feature as of version 2.0.10 and are provided for evaluation purposes only;
+it is strongly recommended to use only constant thresholds in production environments.**
+
+If however you want to experiment with dynamic thresholds, refer to the `QueryLogger` javadocs.
+
+### Performance Tips
+
+* Use asynchronous appenders; both [Log4J](http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/AsyncAppender.html) 
+and [Logback](http://logback.qos.ch/manual/appenders.html#AsyncAppender) provide asynchronous appenders 
+that can significantly boost latencies when writing log messages.
+* While the driver does not provide such capability, it is possible for client applications to hot-reload the log configuration
+without stopping the application. This usually involves JMX and is available for [Logback](http://logback.qos.ch/manual/jmxConfig.html);
+Log4J provides a `configureAndWatch()` method but it is not recommended to use it inside J2EE containers (see [FAQ](https://logging.apache.org/log4j/1.2/faq.html#a3.6)).
+
+### Logback Example
+
+Here is a typical example configuration for Logback. *Please adapt it to your specific needs before using it!*
+
+It logs messages to the console with levels equal to or higher than INFO, and logs all messages to a rolling file. 
+By default, only messages with ERROR level or higher are logged.
+ 
+It also turns on slow query tracing as described above.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+ 
+    <!-- log INFO or higher messages to the console -->
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%-5p %msg%n</pattern>
+        </encoder>
+	</appender>
+ 
+    <!-- log everything to a rolling file -->
+	<appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>driver.log</file>
+		<encoder>
+			<pattern>%-5p [%d{ISO8601}] [%t] %F:%L - %msg%n</pattern>
+		</encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>driver.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- keep 30 days' worth of history -->
+            <maxHistory>30</maxHistory>
+    </rollingPolicy>
+    </appender>
+ 
+    <!-- use AsyncAppender for lower latencies -->
+    <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="console" />
+        <appender-ref ref="file" />
+    </appender>
+   
+    <!--
+    Turn on slow query logging by setting this logger to DEBUG; 
+    set level to TRACE to also log query parameters 
+    -->
+    <logger name="com.datastax.driver.core.QueryLogger.SLOW" level="DEBUG" />
+
+	<root level="ERROR">
+		<appender-ref ref="async" />
+	</root>
+ 
+</configuration>
+```
+
+### Log4J Example
+
+Here is a typical example configuration for Log4J. *Please adapt it to your specific needs before using it!*
+
+It logs messages to the console with levels equal to or higher than INFO, and logs all messages to a rolling file. 
+By default, only messages with ERROR level or higher are logged.
+ 
+It also turns on slow query tracing as described above.
+
+```xml
+<log4j:configuration>
+
+  <!-- log INFO or higher messages to the console -->
+  <appender name="console" class="org.apache.log4j.ConsoleAppender">
+    <param name="threshold" value="INFO"/>
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%-5p %m%n"/>
+    </layout>
+  </appender>
+  
+  <!-- log everything to a rolling file -->
+  <appender name="file" class="org.apache.log4j.RollingFileAppender">
+    <param name="file" value="driver.log"/>
+    <param name="append" value="false"/>
+    <param name="maxFileSize" value="1GB"/>
+    <param name="maxBackupIndex" value="10"/>
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%-5p [%d{ISO8601}] [%t] %F:%L - %m%n"/>
+    </layout>
+  </appender>
+  
+  <!-- use AsyncAppender for lower latencies -->
+  <appender name="async" class="org.apache.log4j.AsyncAppender">
+    <param name="BufferSize" value="500"/>
+    <appender-ref ref="file"/>
+    <appender-ref ref="console"/>
+  </appender>
+  
+  <!--
+   Turn on slow query logging by setting this logger to DEBUG; 
+   set level to TRACE to also log query parameters 
+  -->
+  <logger name="com.datastax.driver.core.QueryLogger.SLOW">
+    <level value="DEBUG"/>
+  </logger>
+  
+  <root>
+    <priority value="ERROR"/>
+    <appender-ref ref="async"/>
+  </root>
+  
+</log4j:configuration>
+```
