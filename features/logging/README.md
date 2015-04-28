@@ -136,9 +136,9 @@ uses 3 different loggers:
 * `com.datastax.driver.core.QueryLogger.SLOW` : Used to log slow queries, i.e., queries that completed successfully but that took longer than a configurable threshold in milliseconds to complete.
 * `com.datastax.driver.core.QueryLogger.ERROR`: Used to log unsuccessful queries, i.e., queries that did not completed normally and threw an exception. Note this this logger will also print the full stack trace of the reported exception.
 
-You need to set at least of of the above loggers to DEBUG level to turn them on. E.g. to track queries
-that take more than 300ms, configure your `QueryLogger` with that threshold, then set the `com.datastax.driver.core.QueryLogger.SLOW` logger
-to DEBUG, e.g. with Log4J:
+You need to set at least one of the above loggers to DEBUG level to turn them on. E.g. to track queries
+that take more than 300 ms to complete, configure your `QueryLogger` with that threshold (see above), 
+then set the `com.datastax.driver.core.QueryLogger.SLOW` logger to DEBUG, e.g. with Log4J:
 
 ```xml
   <logger name="com.datastax.driver.core.QueryLogger.SLOW">
@@ -179,7 +179,7 @@ a dynamic threshold based on per-host latency percentiles, as computed by `PerHo
 **WARNING: Dynamic thresholds are still a beta feature as of version 2.0.10 and are provided for evaluation purposes only;
 it is strongly recommended to use only constant thresholds in production environments.**
 
-If however you want to experiment with dynamic thresholds, refer to the `QueryLogger` javadocs.
+If however you want to experiment with dynamic thresholds, refer to the `QueryLogger` javadocs for an example of usage.
 
 ### Performance Tips
 
