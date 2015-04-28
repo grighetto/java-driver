@@ -125,7 +125,7 @@ way:
 * if no response has been received at t0 + 1000 milliseconds, start
   another speculative execution on a third node.
 
-You can write your own policy by implementing `SpeculativeExecution`.
+You can write your own policy by implementing `SpeculativeExecutionPolicy`.
 There are plans to provide a more elaborate, percentile-based policy
 in a future driver version, see
 [JAVA-723](https://datastax-oss.atlassian.net/browse/JAVA-723) for more
