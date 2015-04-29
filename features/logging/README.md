@@ -23,7 +23,7 @@ For example, if you intend to use [Logback](http://logback.qos.ch), add the foll
 </dependency>
 ```
 
-If your are using Log4J 1.2 instead, add the following dependency:
+If you are using Log4J 1.2 instead, add the following dependency:
 
 ```xml
 <dependency>
@@ -113,7 +113,7 @@ and provide hints about what's going wrong.
 Version 2.0.10 of the driver introduces a new feature: the `QueryLogger`.
 
 This new API provides clients with the ability to log queries executed by the driver,
-and specially, it allows client to track slow queries, i.e. queries that take longer to
+and especially, it allows client to track slow queries, i.e. queries that take longer to
 complete than a configured threshold in milliseconds.
 
 To turn on this feature, you first need to instantiate and register a `QueryLogger` instance:
@@ -134,9 +134,9 @@ uses 3 different loggers:
 
 * `com.datastax.driver.core.QueryLogger.NORMAL` : Used to log normal queries, i.e., queries that completed successfully within a configurable threshold in milliseconds.
 * `com.datastax.driver.core.QueryLogger.SLOW` : Used to log slow queries, i.e., queries that completed successfully but that took longer than a configurable threshold in milliseconds to complete.
-* `com.datastax.driver.core.QueryLogger.ERROR`: Used to log unsuccessful queries, i.e., queries that did not completed normally and threw an exception. Note this this logger will also print the full stack trace of the reported exception.
+* `com.datastax.driver.core.QueryLogger.ERROR`: Used to log unsuccessful queries, i.e., queries that did not complete normally and threw an exception. Note this this logger will also print the full stack trace of the reported exception.
 
-You need to set at least one of the above loggers to DEBUG level to turn them on. E.g. to track queries
+You need to set the above loggers to DEBUG level to turn them on. E.g. to track queries
 that take more than 300 ms to complete, configure your `QueryLogger` with that threshold (see above), 
 then set the `com.datastax.driver.core.QueryLogger.SLOW` logger to DEBUG, e.g. with Log4J:
 
@@ -152,7 +152,7 @@ The `QueryLogger` would then print messages such as this for every slow query:
 DEBUG [cluster1] [/127.0.0.1:9042] Query too slow, took 329 ms: SELECT * FROM users WHERE user_id=?;
 ```
 
-As you can see, actual query parameters are not logged; if you want query parameters to be printed as well, set the `com.datastax.driver.core.QueryLogger.SLOW` logger
+As you can see, actual query parameters are not logged; if you want them to be printed as well, set the `com.datastax.driver.core.QueryLogger.SLOW` logger
 to TRACE instead, e.g. with Log4J:
 
 ```xml
@@ -176,10 +176,11 @@ Currently the `QueryLogger` can be configured to track slow queries using either
 a constant threshold in milliseconds (which is the default behavior), or 
 a dynamic threshold based on per-host latency percentiles, as computed by `PerHostPercentileTracker`.
 
-**WARNING: Dynamic thresholds are still a beta feature as of version 2.0.10 and are provided for evaluation purposes only;
-it is strongly recommended to use only constant thresholds in production environments.**
+**Dynamic thresholds are still a beta feature as of version 2.0.10: they
+haven't been extensively tested yet, and the API is still subject to
+change.**
 
-If however you want to experiment with dynamic thresholds, refer to the `QueryLogger` javadocs for an example of usage.
+Refer to the `QueryLogger` javadocs for an example of usage.
 
 ### Performance Tips
 
