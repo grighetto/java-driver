@@ -103,3 +103,44 @@ The on-demand check does not retry, it only queries system tables once
 (so `maxSchemaAgreementWaitSeconds` does not apply). If you need
 retries, you'll have to schedule them yourself (for example with a
 custom executor).
+
+
+### Token metadata
+
+This feature is probably of less interest to regular driver users, but
+it will be useful if you're writing an analytics client on top of the
+driver.
+
+`Metadata` exposes a number of methods to manipulate tokens and ranges:
+`getTokenRanges()`, `getTokenRanges(String keyspace, Host host)`,
+`getReplicas(String keyspace, TokenRange range)`, `newToken(String)` and
+`newTokenRange(Token start, Token end)`.
+
+`TokenRange` provides various operations on ranges (splitting, merging,
+etc.).
+
+Each `Host` exposes its primary tokens as `getTokens()`.
+
+Finally, you can inject tokens in CQL queries with
+`BoundStatement#setToken`, and retrieve them from results with
+`Row#getToken` and `Row#getPartitionKeyToken`.
+
+As an example, here is how you could compute the splits to partition a
+job (pseudocode):
+
+```
+metadata = cluster.getMetadata()
+for range : metadata.getTokenRanges() {
+    hosts = metadata.getReplicas(keyspace, range)
+    int n = estimateNumberOfSplits() // more on that below
+    for split : range.splitEvenly(n)
+        // pick a host to process split
+}
+```
+
+For `estimateNumberOfSplits`, you need a way to estimate the total
+number of partition keys (this is what analytics clients would
+traditionally do with the Thrift operation `describe_splits_ex`).
+Starting with Cassandra 2.1.5, this information is available in a system
+table (see
+[CASSANDRA-7688](https://issues.apache.org/jira/browse/CASSANDRA-7688)).
