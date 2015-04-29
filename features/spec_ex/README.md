@@ -69,7 +69,8 @@ there is no way to guarantee that only one node will apply the mutation.
 As of Cassandra 2.1.4, the only queries that are *not* idempotent are:
 
 * counter operations;
-* prepending or appending to a list column.
+* prepending or appending to a list column;
+* using non-idempotent CQL functions, like `now()` or `uuid()`.
 
 In the driver, this is determined by `Statement#isIdempotent()`.
 Unfortunately, the driver doesn't parse query strings, so in most cases
@@ -91,19 +92,26 @@ Note that this will also work for built statements (and override the
 computed value).
 
 Additionally, if you know for a fact that your application does not use
-counters nor list appends/prepends, you can change the default
-cluster-wide:
+any of the non-idempotent CQL queries listed above, you can change the
+default cluster-wide:
 
 ```java
 // Make all statements idempotent by default:
 cluster.getConfiguration().getQueryOptions().setDefaultIdempotence(true);
 ```
 
-### Configuring a `SpeculativeExecutionPolicy`
+### Enabling speculative executions
 
-Speculative executions are controlled by a pluggable policy that is
-specified when initializing the `Cluster` instance. A simple
-implementation based on constant delays is provided with the driver:
+Speculative executions are controlled by an instance of
+`SpeculativeExecutionPolicy` provided when initializing the `Cluster`.
+This policy defines the threshold after which a new speculative
+execution will be triggered.
+
+Two implementations are provided with the driver:
+
+#### Using a `ConstantSpeculativeExecutionPolicy`
+
+This simple policy uses a constant threshold:
 
 ```java
 Cluster cluster = Cluster.builder()
@@ -125,11 +133,71 @@ way:
 * if no response has been received at t0 + 1000 milliseconds, start
   another speculative execution on a third node.
 
-You can write your own policy by implementing `SpeculativeExecutionPolicy`.
-There are plans to provide a more elaborate, percentile-based policy
-in a future driver version, see
-[JAVA-723](https://datastax-oss.atlassian.net/browse/JAVA-723) for more
-information.
+#### Using a `PercentileSpeculativeExecutionPolicy`
+
+This policy sets the threshold at a given latency percentile for the
+current host, based on recent statistics.
+
+**As of 2.0.10, this class is provided as a beta preview: it hasn't been
+extensively tested yet, and the API is still subject to change.**
+
+First and foremost, make sure that the [HdrHistogram][hdr] library (used
+under the hood to collect latencies) is in your classpath. It's defined
+as an optional dependency in the driver's POM, so you'll need to
+explicitly depend on it:
+
+```xml
+<dependency>
+  <groupId>org.hdrhistogram</groupId>
+  <artifactId>HdrHistogram</artifactId>
+  <version>2.1.4</version>
+</dependency>
+```
+
+Then create an instance of `PerHostPercentileTracker` that will collect
+latency statistics for your `Cluster`:
+
+```java
+// There are more options than shown here, please refer to the API docs
+// for more information
+PerHostPercentileTracker tracker = PerHostPercentileTracker
+    .builderWithHighestTrackableLatencyMillis(15000)
+    .build();
+```
+
+Create an instance of the policy with the tracker, and pass it to your
+cluster:
+
+```java
+PercentileSpeculativeExecutionPolicy policy =
+    new PercentileSpeculativeExecutionPolicy(
+        tracker,
+        99.0,     // percentile
+        2);       // maximum number of executions
+
+Cluster cluster = Cluster.builder()
+    .addContactPoint("127.0.0.1")
+    .withSpeculativeExecutionPolicy(policy)
+    .build();
+```
+
+Finally, don't forget to register your tracker with the cluster (the
+policy does not do this itself):
+
+```java
+cluster.register(tracker);
+```
+
+Note that `PerHostPercentileTracker` may also be used with a slow query
+logger (see the [Logging](../logging/) section). In that case, you would
+create a single tracker object and share it with both components.
+
+[hdr]: http://hdrhistogram.github.io/HdrHistogram/
+
+#### Using your own
+
+As with all policies, you are free to provide your own by implementing
+`SpeculativeExecutionPolicy`.
 
 ### How speculative executions affect retries
 
