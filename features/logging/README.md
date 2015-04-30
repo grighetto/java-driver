@@ -127,7 +127,9 @@ QueryLogger queryLogger = QueryLogger.builder(cluster)
 cluster.register(queryLogger);
 ```
 
-Refer to the `QueryLogger` javadoc for more information.
+Note that `QueryLogger` instances are thread-safe and can be shared cluster-wide. 
+Besides, you can adjust several parameters such as the maximum query string length to be printed, 
+the maximum number of parameters to print, etc. Refer to the `QueryLogger` javadocs for more information.
 
 Secondly, you need to adjust your logging framework to accept log messages from the `QueryLogger`. The `QueryLogger`
 uses 3 different loggers:
