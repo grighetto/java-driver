@@ -184,8 +184,11 @@ class Frame {
                 // All decompressors allocate a new buffer for the decompressed data, so this is the last time
                 // we have a reference to the compressed body (and therefore a chance to release it).
                 ByteBuf compressedBody = frame.body;
-                out.add(compressor.decompress(frame));
-                compressedBody.release();
+                try {
+                    out.add(compressor.decompress(frame));
+                } finally {
+                    compressedBody.release();
+                }
             } else {
                 out.add(frame);
             }
@@ -210,8 +213,11 @@ class Frame {
                 frame.header.flags.add(Header.Flag.COMPRESSED);
                 // See comment in decode()
                 ByteBuf uncompressedBody = frame.body;
-                out.add(compressor.compress(frame));
-                uncompressedBody.release();
+                try {
+                    out.add(compressor.compress(frame));
+                } finally {
+                    uncompressedBody.release();
+                }
             }
         }
     }
